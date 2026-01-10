@@ -1,12 +1,16 @@
 # HTTP代理服务器
 
-这是一个用Python编写的HTTP代理服务器，可以监听指定端口，记录所有HTTP请求到JSON文件。
+这是一个用Python编写的HTTP代理服务器，可以监听指定端口，接收HTTP请求并转发到目标服务器，同时记录所有请求到JSON文件。
 
 ## 功能特性
 
 - ✅ 监听指定端口接收HTTP请求
 - ✅ 解析并记录所有HTTP请求到JSON文件
 - ✅ 记录详细的请求信息（方法、URL、头部、body等）
+- ✅ 将HTTP请求转发到目标服务器
+- ✅ 将目标服务器的响应返回给客户端
+- ✅ 自动处理gzip压缩和chunked编码
+- ✅ 错误处理和超时控制
 
 ## 环境要求
 
@@ -63,6 +67,30 @@ uv run proxy-server
 4. 端口：8888
 5. 点击"确定"
 
+#### 使用 curl 测试代理（命令行方式）
+
+除了配置浏览器，你也可以使用 curl 命令直接测试代理服务器：
+
+```bash
+# 基本 GET 请求测试
+curl -x http://127.0.0.1:8888 http://httpbin.org/get
+
+# 查看详细信息（包括请求和响应头）
+curl -v -x http://127.0.0.1:8888 http://httpbin.org/get
+
+# POST 请求测试（带 JSON 数据）
+curl -x http://127.0.0.1:8888 -X POST http://httpbin.org/post \
+  -H "Content-Type: application/json" \
+  -d '{"name": "test", "value": 123}'
+
+# 测试带自定义头部
+curl -x http://127.0.0.1:8888 http://httpbin.org/headers \
+  -H "User-Agent: MyTestAgent/1.0" \
+  -H "X-Custom-Header: test-value"
+```
+
+**注意**：由于当前版本不支持 HTTPS，只能测试 HTTP 网站。推荐使用 `httpbin.org` 进行测试。
+
 ### 4. 查看日志
 
 所有HTTP请求都会被记录到 `proxy_log.json` 文件中，格式如下：
@@ -93,6 +121,9 @@ uv run proxy-server
 2. **接收请求**：接收来自浏览器的HTTP请求
 3. **解析请求**：解析HTTP请求的方法、URL、头部和body
 4. **记录日志**：将请求信息保存到JSON文件
+5. **转发请求**：使用requests库将请求转发到目标服务器
+6. **处理响应**：接收目标服务器的响应，自动处理压缩和编码
+7. **返回响应**：将处理后的响应返回给客户端
 
 ## 项目结构
 
@@ -101,15 +132,21 @@ proxy_practice/
 ├── proxy_server.py    # 代理服务器主程序
 ├── pyproject.toml     # 项目配置文件（uv使用）
 ├── uv.lock           # 依赖锁定文件
+├── proxy_log.json    # 请求日志文件（运行后自动生成）
 └── README.md         # 项目说明文档
 ```
 
+## 依赖说明
+
+- **requests** (>=2.31.0): 用于转发HTTP请求到目标服务器
+
 ## 注意事项
 
-- ⚠️ 当前版本仅记录请求，暂不支持请求转发功能
-- ⚠️ 当前版本对HTTPS（CONNECT方法）的支持有限
+- ⚠️ 当前版本不支持HTTPS（CONNECT方法），仅支持HTTP请求
 - ⚠️ 建议仅在本地网络环境中使用
 - ⚠️ 日志文件会持续增长，请注意定期清理
+- ⚠️ 代理会自动处理gzip压缩和chunked编码，确保响应正确传输
+- ⚠️ 请求转发超时时间为30秒
 
 ## 停止服务器
 
