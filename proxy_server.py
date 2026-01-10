@@ -48,6 +48,10 @@ class ProxyServer:
         # 开始监听，参数10表示最多允许10个连接在队列中等待
         self.socket.listen(10)
         
+        # 设置socket超时，这样accept()会定期返回，可以检查KeyboardInterrupt
+        # 在Windows上，阻塞的socket操作可能不会立即响应Ctrl-C
+        self.socket.settimeout(1.0)  # 1秒超时
+        
         print(f"代理服务器启动在 {self.host}:{self.port}")
         print(f"等待客户端连接...")
         print("按 Ctrl+C 停止服务器")
@@ -55,10 +59,14 @@ class ProxyServer:
         try:
             # 无限循环，持续接受客户端连接
             while True:
-                # accept() 会阻塞等待，直到有客户端连接
-                # client_socket: 与客户端通信的socket对象
-                # client_address: 客户端的地址元组 (IP, 端口)
-                client_socket, client_address = self.socket.accept()
+                try:
+                    # accept() 会阻塞等待，直到有客户端连接或超时
+                    # client_socket: 与客户端通信的socket对象
+                    # client_address: 客户端的地址元组 (IP, 端口)
+                    client_socket, client_address = self.socket.accept()
+                except socket.timeout:
+                    # 超时是正常的，继续循环以检查KeyboardInterrupt
+                    continue
                 
                 print(f"收到来自 {client_address[0]}:{client_address[1]} 的连接")
                 
@@ -152,6 +160,9 @@ class ProxyServer:
                     
         except KeyboardInterrupt:
             print("\n正在关闭服务器...")
+            self.stop()
+        except Exception as e:
+            print(f"\n服务器出错: {e}")
             self.stop()
     
     def stop(self):
